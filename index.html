@@ -1,0 +1,646 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="anas playroom: pick a game and play it right in the browser.">
+<title>anas playroom</title>
+<style>
+:root{--bg:#070b08;--panel:#0f1711;--line:#1d2c21;--green:#22c55e;--text:#f3f8f4;--muted:#85a08e}
+*{box-sizing:border-box}
+body{margin:0;background:radial-gradient(circle at 50% -10%,#0d2316,var(--bg) 55%);color:var(--text);font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;min-height:100vh}
+header{text-align:center;padding:2.5rem 1rem 1rem}
+h1{margin:0;font-size:clamp(2rem,6vw,3.2rem);letter-spacing:.05em}
+h1 span{color:var(--green)}
+header p{color:var(--muted);margin:.4rem 0 0}
+#menu{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:1rem;max-width:900px;margin:1.5rem auto;padding:0 1rem}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:1.4rem;color:inherit;text-align:left;font:inherit;cursor:pointer;transition:transform .15s,border-color .15s}
+.card:hover,.card:focus-visible{transform:translateY(-4px);border-color:var(--green);outline:none}
+.card i{font-style:normal;font-size:2.4rem;display:block;margin-bottom:.5rem}
+.card b{display:block;font-size:1.1rem}
+.card small{color:var(--muted)}
+#stage{max-width:700px;margin:1rem auto;padding:0 1rem 2rem}
+.bar{display:flex;align-items:center;gap:1rem;margin-bottom:1rem}
+.bar h2{margin:0;font-size:1.3rem}
+.btn{background:var(--green);color:#04130a;border:0;border-radius:8px;padding:.55rem 1rem;font:inherit;font-weight:700;cursor:pointer}
+.btn.ghost{background:transparent;color:var(--text);border:1px solid var(--line)}
+.btn:hover{filter:brightness(1.1)}
+.btn:focus-visible,.key:focus-visible,.cell:focus-visible{outline:2px solid #fff;outline-offset:2px}
+.hud{display:flex;justify-content:space-between;gap:1rem;margin-bottom:.6rem;color:var(--muted)}
+.hud b{color:var(--green)}
+.field{position:relative;height:340px;background:var(--panel);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.bug{position:absolute;font-size:2.4rem;border:0;background:none;cursor:pointer;transform:translate(-50%,-50%);animation:pop .2s}
+@keyframes pop{from{transform:translate(-50%,-50%) scale(0)}}
+canvas{display:block;width:100%;height:auto;background:#000;border:1px solid var(--line);border-radius:12px;touch-action:none}
+.msg{margin:.8rem 0;text-align:center;min-height:1.4em;color:var(--green);font-weight:700}
+.word{display:flex;justify-content:center;gap:.5rem;margin:1rem 0;font-size:2rem;font-weight:700}
+.word span{width:2rem;border-bottom:3px solid var(--green);text-align:center;min-height:2.4rem}
+.keys{display:flex;flex-wrap:wrap;gap:.4rem;justify-content:center}
+.key{width:2.4rem;height:2.4rem;background:var(--panel);color:var(--text);border:1px solid var(--line);border-radius:8px;font:inherit;font-weight:700;cursor:pointer;text-transform:uppercase}
+.key:disabled{opacity:.3;cursor:default}
+.key.hit{background:var(--green);color:#04130a}
+svg.hang{display:block;margin:0 auto;width:150px;stroke:var(--text);stroke-width:4;stroke-linecap:round;fill:none}
+svg.hang .p{display:none;stroke:var(--green)}
+.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:.6rem;max-width:420px;margin:0 auto}
+.cell{aspect-ratio:1;background:var(--panel);border:1px solid var(--line);border-radius:12px;font-size:2.2rem;cursor:pointer;color:var(--text)}
+.cell.open{background:#0d2316;border-color:var(--green)}
+.cell.done{background:var(--green)}
+.tools{display:flex;flex-wrap:wrap;gap:.6rem;align-items:center;margin-top:.8rem}
+.sw{width:1.8rem;height:1.8rem;border-radius:50%;border:2px solid var(--line);cursor:pointer;padding:0}
+.sw.on{border-color:#fff}
+input[type=range]{accent-color:var(--green)}
+.pads{grid-template-columns:repeat(2,1fr);max-width:320px}
+.pad{border-radius:18px;transition:filter .1s,box-shadow .1s}
+.p0{background:#14532d}.p1{background:#166534}.p2{background:#22c55e}.p3{background:#e6f0e9}
+.pad.lit{filter:brightness(1.7);box-shadow:0 0 36px var(--green)}
+.type{width:100%;margin-top:.6rem;padding:.7rem 1rem;background:var(--panel);border:1px solid var(--green);border-radius:10px;color:var(--text);font:1.1rem monospace}
+.type:focus{outline:2px solid #fff;outline-offset:2px}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+:root{--bg:#050806;--panel:#0d1611;--line:#ffffff14;--c1:#0f766e;--green:#a3e635}
+body{background:#050806 radial-gradient(60rem 30rem at 85% -10%,#16a34a45,transparent),radial-gradient(50rem 30rem at -10% 25%,#0e749040,transparent),radial-gradient(40rem 30rem at 60% 110%,#f59e0b26,transparent) fixed;font-family:"Segoe UI",system-ui,-apple-system,Roboto,sans-serif}
+body::after{content:"";position:fixed;inset:0;pointer-events:none;opacity:.08;mix-blend-mode:overlay;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence baseFrequency='.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
+header.hero{max-width:1100px;margin:0 auto;padding:3.5rem 1.25rem 1rem;text-align:left}
+.eyebrow{margin:0 0 .8rem;font-size:.8rem;letter-spacing:.25em;text-transform:uppercase;color:#a3e635}
+header.hero h1{font-size:clamp(3.2rem,12vw,7rem);font-weight:900;letter-spacing:-.05em;line-height:.9;background:linear-gradient(95deg,#fff 20%,#a3e635 55%,#22d3ee);-webkit-background-clip:text;background-clip:text;color:transparent}
+header.hero h1 em{font-style:normal;font-weight:300}
+.sub{max-width:34ch;margin:1rem 0 0;color:#9fb7a8;font-size:1.1rem}
+#menu{grid-template-columns:repeat(auto-fit,minmax(250px,1fr));grid-auto-flow:dense;max-width:1100px;gap:1.1rem;padding:1.5rem 1.25rem 3rem}
+.card{position:relative;overflow:hidden;min-height:200px;display:flex;flex-direction:column;justify-content:flex-end;border:1px solid #ffffff22;background:linear-gradient(135deg,var(--c1),var(--c2));border-radius:22px;color:#fff;box-shadow:0 18px 40px -18px #000}
+.card::before{content:"";position:absolute;inset:0;background:linear-gradient(to top,#000c,transparent 70%);z-index:1}
+.card>*{position:relative;z-index:2}
+.card .art{position:absolute;inset:0;z-index:0;-webkit-mask-image:linear-gradient(90deg,transparent 20%,#000);mask-image:linear-gradient(90deg,transparent 20%,#000);transition:transform .4s}
+.card:hover .art{transform:scale(1.12) rotate(2deg)}
+.card:hover,.card:focus-visible{transform:translateY(-6px);border-color:#fff}
+.card .n{position:absolute;top:.9rem;left:1.2rem;font-size:3rem;font-weight:900;line-height:1;color:transparent;-webkit-text-stroke:1.5px #ffffffaa}
+.card .chip{position:absolute;top:1.1rem;right:1.1rem;padding:.2rem .7rem;font-size:.7rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;background:#0006;backdrop-filter:blur(8px);border:1px solid #ffffff30;border-radius:99px}
+.card b{font-size:1.35rem;letter-spacing:-.01em}
+.card small{color:#ffffffcc;margin-top:.2rem}
+@media(min-width:760px){.card:nth-child(4n+1){grid-column:span 2}}
+#stage{position:fixed;inset:0;z-index:50;max-width:none;margin:0;padding:1.2rem 1rem 2.5rem;overflow:auto;background:radial-gradient(50rem 28rem at 50% -10%,#16a34a40,transparent),#050806f2;-webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px);animation:stagein .3s cubic-bezier(.2,.8,.2,1)}
+#stage>*{max-width:780px;margin-left:auto;margin-right:auto}
+.bar{padding-top:.5rem}
+@keyframes stagein{from{opacity:0;transform:translateY(24px) scale(.97)}}
+.bar h2{font-size:1.6rem;font-weight:800;background:linear-gradient(90deg,#fff,var(--green));-webkit-background-clip:text;background-clip:text;color:transparent}
+#game{background:linear-gradient(160deg,#122319,#070d09);border:1px solid #ffffff1a;border-radius:24px;padding:1.3rem;box-shadow:0 40px 90px -30px #000,inset 0 1px #ffffff14}
+.btn{background:var(--green);border-radius:10px}
+.board{display:grid;grid-template-columns:repeat(4,1fr);gap:.6rem;max-width:380px;margin:0 auto;padding:.6rem;background:#08100b;border-radius:16px;touch-action:none}
+.t{aspect-ratio:1;border-radius:10px;background:#15241b;display:grid;place-items:center;font-weight:800;font-size:clamp(1.1rem,5vw,1.8rem);color:#fff}
+.mgrid{display:grid;grid-template-columns:repeat(9,1fr);gap:4px;max-width:380px;margin:0 auto}
+.mc{aspect-ratio:1;border:0;border-radius:6px;background:linear-gradient(145deg,#24432f,#14281b);color:#fff;font:700 1rem system-ui;cursor:pointer;padding:0}
+.mc.open{background:#08100b;cursor:default}.mc.bomb{background:#991b1b}
+.mc[data-n="1"]{color:#86efac}.mc[data-n="2"]{color:#fde047}.mc[data-n="3"]{color:#fb923c}.mc[data-n]:not([data-n="1"]):not([data-n="2"]):not([data-n="3"]){color:#f87171}
+.lo{grid-template-columns:repeat(5,1fr);max-width:340px;gap:.5rem}
+.lo .cell{border-radius:14px;background:#14281b}
+.lo .cell.lit{background:var(--green);box-shadow:0 0 22px var(--green)}
+.react{display:grid;place-items:center;height:300px;padding:1rem;border-radius:18px;background:#14281b;font-size:1.6rem;font-weight:800;text-align:center;cursor:pointer;user-select:none}
+.react.wait{background:#7f1d1d}.react.go{background:var(--green);color:#04130a}
+.react:focus-visible{outline:2px solid #fff;outline-offset:3px}
+.ttt{grid-template-columns:repeat(3,1fr);max-width:320px}
+.ttt .cell{font-size:2.8rem;font-weight:800}.ttt .X{color:var(--green)}.ttt .O{color:#fff}
+</style>
+</head>
+<body>
+<header class="hero"><h1>anas <em>playroom</em></h1></header>
+<main id="menu"></main>
+<section id="stage" hidden>
+  <div class="bar"><button class="btn ghost" id="back">&larr; Menu</button><h2 id="title"></h2></div>
+  <div id="game"></div>
+</section>
+<script>
+const $=(s,r=document)=>r.querySelector(s);
+const store={get:(k,d)=>{try{return JSON.parse(localStorage.getItem(k))??d}catch(e){return d}},set:(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
+const rand=n=>Math.floor(Math.random()*n);
+
+function bugs(root,again){
+  root.innerHTML='<div class="hud"><span>Score <b id="s">0</b></span><span>Time <b id="t">30</b></span><span>Best <b id="b"></b></span></div><div class="field" id="f"></div><p class="msg" id="m">Squash as many bugs as you can in 30 seconds.</p><button class="btn" id="go">Start</button>';
+  const f=$('#f',root),m=$('#m',root);let score=0,time=30,spawn,clock,best=store.get('bugs-best',0);
+  $('#b',root).textContent=best;
+  const stop=()=>{clearInterval(spawn);clearInterval(clock)};
+  $('#go',root).onclick=()=>{
+    stop();f.innerHTML='';score=0;time=30;m.textContent='';$('#s',root).textContent=0;$('#t',root).textContent=30;
+    spawn=setInterval(()=>{
+      const b=document.createElement('button');b.className='bug';b.textContent=['🐛','🪲','🐞','🦗','🕷️'][rand(5)];b.setAttribute('aria-label','Bug');
+      b.style.left=10+rand(80)+'%';b.style.top=12+rand(76)+'%';
+      b.onclick=()=>{b.remove();$('#s',root).textContent=++score};
+      f.appendChild(b);setTimeout(()=>b.remove(),1400);
+    },550);
+    clock=setInterval(()=>{
+      $('#t',root).textContent=--time;
+      if(time<=0){stop();f.innerHTML='';if(score>best){best=score;store.set('bugs-best',best);$('#b',root).textContent=best}m.textContent='Time is up! You squashed '+score+' bugs.'}
+    },1000);
+  };
+  return stop;
+}
+
+function hangman(root,again){
+  const words=['javascript','browser','function','variable','keyboard','responsive','gradient','element','network','project','pixel','canvas'];
+  const word=words[rand(words.length)];let found=new Set(),wrong=0;
+  const parts=['<circle class="p" cx="110" cy="52" r="12"/>','<path class="p" d="M110 64v40"/>','<path class="p" d="M110 74l-16 16"/>','<path class="p" d="M110 74l16 16"/>','<path class="p" d="M110 104l-14 22"/>','<path class="p" d="M110 104l14 22"/>'];
+  root.innerHTML='<svg class="hang" viewBox="0 0 160 140"><path d="M20 135h70M40 135V15h70v22"/>'+parts.join('')+'</svg><div class="word" id="w"></div><p class="msg" id="m"></p><div class="keys" id="k"></div>';
+  const w=$('#w',root),m=$('#m',root),k=$('#k',root);let over=false;
+  const draw=()=>{w.innerHTML=[...word].map(c=>'<span>'+(found.has(c)?c:'')+'</span>').join('');
+    root.querySelectorAll('.p').forEach((p,i)=>p.style.display=i<wrong?'block':'none')};
+  const guess=c=>{
+    if(over||found.has(c)||k.querySelector('[data-k="'+c+'"]').disabled)return;
+    const btn=k.querySelector('[data-k="'+c+'"]');btn.disabled=true;
+    if(word.includes(c)){found.add(c);btn.classList.add('hit')}else wrong++;
+    draw();
+    if([...word].every(x=>found.has(x))){over=true;m.innerHTML='You win! <button class="btn" id="r">Play again</button>'}
+    else if(wrong>=6){over=true;m.innerHTML='The word was <u>'+word+'</u>. <button class="btn" id="r">Try again</button>'}
+    if(over)$('#r',root).onclick=again;
+  };
+  'abcdefghijklmnopqrstuvwxyz'.split('').forEach(c=>{const b=document.createElement('button');b.className='key';b.textContent=c;b.dataset.k=c;b.onclick=()=>guess(c);k.appendChild(b)});
+  const onKey=e=>{if(/^[a-z]$/i.test(e.key)&&!e.ctrlKey&&!e.metaKey&&!e.altKey)guess(e.key.toLowerCase())};
+  document.addEventListener('keydown',onKey);draw();
+  return()=>document.removeEventListener('keydown',onKey);
+}
+
+function memory(root,again){
+  const icons=['🌿','🍀','🌵','🐢','🐸','🥝','🍏','🌲'];
+  const deck=[...icons,...icons].sort(()=>Math.random()-.5);
+  root.innerHTML='<div class="hud"><span>Moves <b id="mv">0</b></span><span>Best <b id="bs"></b></span></div><div class="grid" id="g"></div><p class="msg" id="m"></p>';
+  const g=$('#g',root),m=$('#m',root);let first=null,lock=false,moves=0,pairs=0,best=store.get('memory-best',0);
+  $('#bs',root).textContent=best||'-';
+  deck.forEach(ic=>{
+    const c=document.createElement('button');c.className='cell';c.setAttribute('aria-label','Hidden card');
+    c.onclick=()=>{
+      if(lock||c.classList.contains('open')||c.classList.contains('done'))return;
+      c.classList.add('open');c.textContent=ic;
+      if(!first){first=c;return}
+      $('#mv',root).textContent=++moves;lock=true;
+      if(first.textContent===ic){first.classList.replace('open','done');c.classList.replace('open','done');first=null;lock=false;
+        if(++pairs===8){if(!best||moves<best){store.set('memory-best',moves);$('#bs',root).textContent=moves}m.innerHTML='Solved in '+moves+' moves! <button class="btn" id="r">Play again</button>';$('#r',root).onclick=again}}
+      else setTimeout(()=>{[first,c].forEach(x=>{x.classList.remove('open');x.textContent=''});first=null;lock=false},700);
+    };
+    g.appendChild(c);
+  });
+  return()=>{};
+}
+
+function breakout(root,again){
+  root.innerHTML='<div class="hud"><span>Score <b id="s">0</b></span><span>Lives <b id="l">3</b></span></div><canvas id="c" width="480" height="320"></canvas><p class="msg" id="m">Move with the mouse, your finger or the arrow keys.</p>';
+  const c=$('#c',root),x=c.getContext('2d'),m=$('#m',root);
+  let score=0,lives=3,raf,L=false,R=false,done=false;
+  const p={x:200,w:84,h:10},ball={x:240,y:250,vx:3,vy:-3,r:7},bricks=[];
+  for(let r=0;r<5;r++)for(let i=0;i<8;i++)bricks.push({x:i*58+10,y:r*22+30,w:52,h:16,on:true});
+  const serve=()=>{ball.x=240;ball.y=250;ball.vx=(Math.random()<.5?-3:3);ball.vy=-3};
+  const end=t=>{done=true;m.innerHTML=t+' <button class="btn" id="r">Play again</button>';$('#r',root).onclick=again};
+  function frame(){
+    if(L)p.x-=6;if(R)p.x+=6;p.x=Math.max(0,Math.min(c.width-p.w,p.x));
+    ball.x+=ball.vx;ball.y+=ball.vy;
+    if(ball.x<ball.r||ball.x>c.width-ball.r)ball.vx*=-1;
+    if(ball.y<ball.r)ball.vy*=-1;
+    const top=c.height-20;
+    if(ball.vy>0&&ball.y+ball.r>=top&&ball.y+ball.r<=top+12&&ball.x>p.x&&ball.x<p.x+p.w){ball.vy=-Math.abs(ball.vy);ball.vx=(ball.x-(p.x+p.w/2))/(p.w/2)*4}
+    for(const b of bricks)if(b.on&&ball.x>b.x&&ball.x<b.x+b.w&&ball.y-ball.r<b.y+b.h&&ball.y+ball.r>b.y){b.on=false;ball.vy*=-1;$('#s',root).textContent=score+=10;break}
+    if(ball.y>c.height){$('#l',root).textContent=--lives;if(lives<=0)return end('Game over!');serve()}
+    if(bricks.every(b=>!b.on))return end('You cleared it!');
+    x.clearRect(0,0,c.width,c.height);
+    bricks.forEach((b,i)=>{if(b.on){x.fillStyle=i%2?'#22c55e':'#16a34a';x.fillRect(b.x,b.y,b.w,b.h)}});
+    x.fillStyle='#fff';x.fillRect(p.x,top,p.w,p.h);
+    x.beginPath();x.arc(ball.x,ball.y,ball.r,0,7);x.fill();
+    raf=requestAnimationFrame(frame);
+  }
+  const down=e=>{if(e.key==='ArrowLeft')L=true;if(e.key==='ArrowRight')R=true};
+  const up=e=>{if(e.key==='ArrowLeft')L=false;if(e.key==='ArrowRight')R=false};
+  c.addEventListener('pointermove',e=>{const r=c.getBoundingClientRect();p.x=(e.clientX-r.left)*c.width/r.width-p.w/2});
+  document.addEventListener('keydown',down);document.addEventListener('keyup',up);
+  frame();
+  return()=>{cancelAnimationFrame(raf);document.removeEventListener('keydown',down);document.removeEventListener('keyup',up)};
+}
+
+function drawing(root){
+  const colors=['#22c55e','#ffffff','#16a34a','#86efac','#000000'];
+  root.innerHTML='<canvas id="c" width="640" height="400"></canvas><div class="tools" id="t"></div>';
+  const c=$('#c',root),x=c.getContext('2d'),t=$('#t',root);
+  x.fillStyle='#000';x.fillRect(0,0,c.width,c.height);
+  let color=colors[0],size=6,down=false,lx,ly;
+  colors.forEach((col,i)=>{const b=document.createElement('button');b.className='sw'+(i?'':' on');b.style.background=col;b.setAttribute('aria-label','Color '+col);
+    b.onclick=()=>{color=col;t.querySelectorAll('.sw').forEach(s=>s.classList.remove('on'));b.classList.add('on')};t.appendChild(b)});
+  t.insertAdjacentHTML('beforeend','<input type="range" id="sz" min="2" max="40" value="6" aria-label="Brush size"><button class="btn ghost" id="cl">Clear</button><button class="btn" id="sv">Save PNG</button>');
+  const pos=e=>{const r=c.getBoundingClientRect();return[(e.clientX-r.left)*c.width/r.width,(e.clientY-r.top)*c.height/r.height]};
+  const line=(a,b,u,v)=>{x.strokeStyle=color;x.lineWidth=size;x.lineCap='round';x.beginPath();x.moveTo(a,b);x.lineTo(u,v);x.stroke()};
+  c.onpointerdown=e=>{down=true;c.setPointerCapture(e.pointerId);[lx,ly]=pos(e);line(lx,ly,lx,ly)};
+  c.onpointermove=e=>{if(!down)return;const[a,b]=pos(e);line(lx,ly,a,b);lx=a;ly=b};
+  c.onpointerup=c.onpointercancel=()=>down=false;
+  $('#sz',root).oninput=e=>size=+e.target.value;
+  $('#cl',root).onclick=()=>{x.fillStyle='#000';x.fillRect(0,0,c.width,c.height)};
+  $('#sv',root).onclick=()=>{const a=document.createElement('a');a.href=c.toDataURL('image/png');a.download='drawing.png';a.click()};
+  return()=>{};
+}
+
+function signal(root,again){
+  root.innerHTML='<div class="hud"><span>Round <b id="r">0</b></span><span>Best <b id="b"></b></span></div><div class="grid pads" id="g"></div><p class="msg" id="m">Watch the pattern, then repeat it.</p><button class="btn" id="go">Start</button>';
+  const g=$('#g',root),m=$('#m',root),AC=window.AudioContext||window.webkitAudioContext,pads=[];
+  let ctx,seq=[],pos=0,busy=true,best=store.get('signal-best',0);
+  $('#b',root).textContent=best;
+  const tone=i=>{try{ctx=ctx||new AC();const o=ctx.createOscillator(),v=ctx.createGain();o.frequency.value=[261,329,392,523][i];v.gain.value=.08;o.connect(v);v.connect(ctx.destination);o.start();o.stop(ctx.currentTime+.25)}catch(e){}};
+  const wait=ms=>new Promise(r=>setTimeout(r,ms));
+  const flash=async i=>{pads[i].classList.add('lit');tone(i);await wait(350);pads[i].classList.remove('lit');await wait(150)};
+  const next=async()=>{
+    seq.push(rand(4));$('#r',root).textContent=seq.length;busy=true;m.textContent='Watch...';
+    await wait(500);for(const i of seq)await flash(i);
+    busy=false;pos=0;m.textContent='Your turn';
+  };
+  for(let i=0;i<4;i++){
+    const b=document.createElement('button');b.className='cell pad p'+i;b.setAttribute('aria-label','Pad '+(i+1));
+    b.onclick=async()=>{
+      if(busy)return;busy=true;await flash(i);
+      if(i!==seq[pos]){
+        const s=seq.length-1;if(s>best){best=s;store.set('signal-best',s);$('#b',root).textContent=s}
+        m.innerHTML='Missed! You reached round '+seq.length+'. <button class="btn" id="rr">Play again</button>';$('#rr',root).onclick=again;return;
+      }
+      if(++pos===seq.length){await wait(400);next()}else busy=false;
+    };
+    pads.push(b);g.appendChild(b);
+  }
+  $('#go',root).onclick=e=>{e.target.remove();seq=[];next()};
+  return()=>{busy=true;try{ctx&&ctx.close()}catch(e){}};
+}
+
+function typerain(root,again){
+  const words='array object string loop async await class const return import export event scope token parse stack queue merge fetch debug build route hash cache style flex grid font pixel frame state props hook'.split(' ');
+  root.innerHTML='<div class="hud"><span>Score <b id="s">0</b></span><span>Lives <b id="l">3</b></span><span>Best <b id="b"></b></span></div><canvas id="c" width="480" height="340"></canvas><input class="type" id="i" placeholder="Type the falling words" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="Type here"><p class="msg" id="m"></p>';
+  const c=$('#c',root),x=c.getContext('2d'),inp=$('#i',root),m=$('#m',root);
+  let ws=[],score=0,lives=3,raf,last=0,spawn=0,best=store.get('rain-best',0);
+  $('#b',root).textContent=best;inp.focus();
+  inp.oninput=()=>{
+    const v=inp.value.trim().toLowerCase(),i=ws.findIndex(o=>o.w===v);
+    if(i>-1){score+=ws[i].w.length*5;ws.splice(i,1);inp.value='';$('#s',root).textContent=score}
+  };
+  function frame(t){
+    const dt=Math.min(t-last,50);last=t;spawn-=dt;
+    if(spawn<=0){spawn=Math.max(650,1500-score*2);ws.push({w:words[rand(words.length)],x:10+Math.random()*(c.width-110),y:-10,v:.04+score/9000})}
+    x.clearRect(0,0,c.width,c.height);x.font='20px monospace';
+    const typed=inp.value.trim().toLowerCase();
+    ws=ws.filter(o=>{
+      o.y+=o.v*dt;
+      if(o.y>c.height){$('#l',root).textContent=--lives;return false}
+      const k=typed&&o.w.startsWith(typed)?typed.length:0,a=o.w.slice(0,k);
+      x.fillStyle='#fff';x.fillText(a,o.x,o.y);
+      x.fillStyle='#22c55e';x.fillText(o.w.slice(k),o.x+x.measureText(a).width,o.y);
+      return true;
+    });
+    if(lives<=0){
+      inp.disabled=true;if(score>best)store.set('rain-best',score);
+      m.innerHTML='Overflow! Final score '+score+'. <button class="btn" id="r">Play again</button>';$('#r',root).onclick=again;return;
+    }
+    raf=requestAnimationFrame(frame);
+  }
+  raf=requestAnimationFrame(t=>{last=t;frame(t)});
+  return()=>cancelAnimationFrame(raf);
+}
+
+function snake(root,again){
+  root.innerHTML='<div class="hud"><span>Score <b id="s">0</b></span><span>Best <b id="b"></b></span></div><canvas id="c" width="400" height="400"></canvas><p class="msg" id="m">Arrow keys, WASD or swipe.</p>';
+  const c=$('#c',root),x=c.getContext('2d'),N=20,S=c.width/N,m=$('#m',root);
+  let body=[{x:10,y:10}],dir={x:1,y:0},nxt=dir,food,score=0,timer,sx,sy,best=store.get('snake-best',0);
+  $('#b',root).textContent=best;
+  const place=()=>{do food={x:rand(N),y:rand(N)};while(body.some(s=>s.x===food.x&&s.y===food.y))};
+  const turn=(dx,dy)=>{if(dx!==-dir.x||dy!==-dir.y)nxt={x:dx,y:dy}};
+  const keys={ArrowUp:[0,-1],w:[0,-1],ArrowDown:[0,1],s:[0,1],ArrowLeft:[-1,0],a:[-1,0],ArrowRight:[1,0],d:[1,0]};
+  const onKey=e=>{const k=keys[e.key];if(k){e.preventDefault();turn(k[0],k[1])}};
+  c.addEventListener('pointerdown',e=>{sx=e.clientX;sy=e.clientY});
+  c.addEventListener('pointerup',e=>{
+    const dx=e.clientX-sx,dy=e.clientY-sy;
+    if(Math.max(Math.abs(dx),Math.abs(dy))<20)return;
+    if(Math.abs(dx)>Math.abs(dy))turn(Math.sign(dx),0);else turn(0,Math.sign(dy));
+  });
+  const tick=()=>{
+    dir=nxt;const h={x:body[0].x+dir.x,y:body[0].y+dir.y};
+    if(h.x<0||h.y<0||h.x>=N||h.y>=N||body.some(s=>s.x===h.x&&s.y===h.y)){
+      clearInterval(timer);if(score>best)store.set('snake-best',score);
+      m.innerHTML='Crashed with '+score+' points. <button class="btn" id="r">Play again</button>';$('#r',root).onclick=again;return;
+    }
+    body.unshift(h);
+    if(h.x===food.x&&h.y===food.y){
+      $('#s',root).textContent=++score;place();clearInterval(timer);timer=setInterval(tick,Math.max(55,120-score*3));
+    }else body.pop();
+    x.fillStyle='#000';x.fillRect(0,0,c.width,c.height);
+    x.fillStyle='#fff';x.beginPath();x.arc(food.x*S+S/2,food.y*S+S/2,S/3,0,7);x.fill();
+    body.forEach((s,i)=>{x.fillStyle=i?'#16a34a':'#22c55e';x.fillRect(s.x*S+1,s.y*S+1,S-2,S-2)});
+  };
+  place();document.addEventListener('keydown',onKey);timer=setInterval(tick,120);
+  return()=>{clearInterval(timer);document.removeEventListener('keydown',onKey)};
+}
+
+function g2048(root,again){
+  root.innerHTML='<div class="hud"><span>Score <b id="s">0</b></span><span>Best <b id="b"></b></span></div><div class="board" id="bd"></div><p class="msg" id="m">Arrow keys or swipe. Merge tiles up to 2048.</p>';
+  const bd=$('#bd',root),m=$('#m',root);
+  let g=Array(16).fill(0),score=0,won=false,over=false,sx,sy,best=store.get('2048-best',0);
+  $('#b',root).textContent=best;
+  const add=()=>{const e=g.map((v,i)=>v?-1:i).filter(i=>i>=0);if(e.length)g[e[rand(e.length)]]=Math.random()<.9?2:4};
+  const squash=r=>{const a=r.filter(Boolean);for(let i=0;i<a.length-1;i++)if(a[i]===a[i+1]){a[i]*=2;score+=a[i];a.splice(i+1,1)}while(a.length<4)a.push(0);return a};
+  const draw=()=>{
+    bd.innerHTML=g.map(v=>'<div class="t"'+(v?' style="background:hsl('+(160-Math.log2(v)*11)+' 70% '+Math.max(22,46-Math.log2(v)*1.5)+'%)"':'')+'>'+(v||'')+'</div>').join('');
+    $('#s',root).textContent=score;
+    if(score>best){best=score;store.set('2048-best',best);$('#b',root).textContent=best}
+    if(g.includes(2048)&&!won){won=true;m.textContent='2048! Keep going if you dare.'}
+    if(!g.includes(0)&&!g.some((v,i)=>(i%4<3&&v===g[i+1])||(i<12&&v===g[i+4]))){over=true;m.innerHTML='No moves left. <button class="btn" id="r">Play again</button>';$('#r',root).onclick=again}
+  };
+  const move=d=>{
+    if(over)return;const before=g.join();
+    for(let i=0;i<4;i++){
+      const idx=[0,1,2,3].map(j=>d<2?i*4+j:j*4+i);
+      let r=idx.map(k=>g[k]);if(d%2)r.reverse();r=squash(r);if(d%2)r.reverse();idx.forEach((k,j)=>g[k]=r[j]);
+    }
+    if(g.join()!==before){add();draw()}
+  };
+  const map={ArrowLeft:0,a:0,ArrowRight:1,d:1,ArrowUp:2,w:2,ArrowDown:3,s:3};
+  const onKey=e=>{if(e.key in map){e.preventDefault();move(map[e.key])}};
+  bd.addEventListener('pointerdown',e=>{sx=e.clientX;sy=e.clientY});
+  bd.addEventListener('pointerup',e=>{
+    const dx=e.clientX-sx,dy=e.clientY-sy;if(Math.max(Math.abs(dx),Math.abs(dy))<25)return;
+    move(Math.abs(dx)>Math.abs(dy)?(dx>0?1:0):(dy>0?3:2));
+  });
+  document.addEventListener('keydown',onKey);add();add();draw();
+  return()=>document.removeEventListener('keydown',onKey);
+}
+
+function mines(root,again){
+  const N=9,M=10;
+  root.innerHTML='<div class="hud"><span>Mines <b id="mc">10</b></span><span>Best <b id="b"></b></span></div><div class="mgrid" id="g"></div><p class="msg" id="m">Click to reveal. Right-click or long-press to flag.</p>';
+  const g=$('#g',root),m=$('#m',root),cells=[];
+  let started=false,over=false,left=N*N-M,flags=0,t0,best=store.get('mines-best',0);
+  $('#b',root).textContent=best?best+'s':'-';
+  const nb=i=>{const r=Math.floor(i/N),c=i%N,o=[];for(let a=-1;a<=1;a++)for(let b=-1;b<=1;b++){const y=r+a,x=c+b;if((a||b)&&y>=0&&y<N&&x>=0&&x<N)o.push(y*N+x)}return o};
+  const plant=safe=>{let n=0;while(n<M){const i=rand(N*N);if(i!==safe&&!cells[i].mine&&!nb(safe).includes(i)){cells[i].mine=true;n++}}cells.forEach((c,i)=>c.n=nb(i).filter(j=>cells[j].mine).length)};
+  const finish=t=>{over=true;m.innerHTML=t+' <button class="btn" id="r">Play again</button>';$('#r',root).onclick=again};
+  const reveal=i=>{
+    const c=cells[i];if(c.open||c.flag||over)return;
+    if(!started){started=true;t0=Date.now();plant(i)}
+    if(c.mine){cells.forEach(k=>{if(k.mine){k.el.textContent='💣';k.el.classList.add('open','bomb')}});return finish('Boom!')}
+    c.open=true;c.el.classList.add('open');left--;
+    if(c.n){c.el.textContent=c.n;c.el.dataset.n=c.n}else nb(i).forEach(reveal);
+    if(left===0){const s=Math.round((Date.now()-t0)/1000);if(!best||s<best){best=s;store.set('mines-best',s);$('#b',root).textContent=s+'s'}finish('Cleared in '+s+'s!')}
+  };
+  const flag=i=>{const c=cells[i];if(c.open||over)return;c.flag=!c.flag;c.el.textContent=c.flag?'🚩':'';flags+=c.flag?1:-1;$('#mc',root).textContent=M-flags};
+  for(let i=0;i<N*N;i++){
+    const el=document.createElement('button');el.className='mc';el.setAttribute('aria-label','Cell');let lp=false,tm;
+    el.onpointerdown=e=>{lp=false;if(e.button===0)tm=setTimeout(()=>{lp=true;flag(i)},450)};
+    el.onpointerup=el.onpointerleave=()=>clearTimeout(tm);
+    el.onclick=()=>{if(lp){lp=false;return}reveal(i)};
+    el.oncontextmenu=e=>{e.preventDefault();flag(i)};
+    cells.push({el});g.appendChild(el);
+  }
+  return()=>{};
+}
+
+function ttt(root,again){
+  const sc=store.get('ttt',{w:0,d:0,a:0});
+  root.innerHTML='<div class="hud"><span>You <b id="w">'+sc.w+'</b></span><span>Draws <b id="d">'+sc.d+'</b></span><span>AI <b id="a">'+sc.a+'</b></span></div><div class="grid ttt" id="g"></div><p class="msg" id="m">You are X. The AI is strong, but not perfect.</p>';
+  const g=$('#g',root),m=$('#m',root),bd=Array(9).fill(''),cells=[];let over=false;
+  const L=[[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
+  const result=b=>{for(const[a,c,d]of L)if(b[a]&&b[a]===b[c]&&b[a]===b[d])return b[a];return b.includes('')?null:'D'};
+  const mm=(b,p)=>{
+    const r=result(b);if(r)return r==='O'?1:r==='X'?-1:0;
+    let best=p==='O'?-2:2;
+    for(let i=0;i<9;i++)if(!b[i]){b[i]=p;const s=mm(b,p==='O'?'X':'O');b[i]='';best=p==='O'?Math.max(best,s):Math.min(best,s)}
+    return best;
+  };
+  const aiMove=()=>{
+    const free=bd.map((v,i)=>v?-1:i).filter(i=>i>=0);
+    if(Math.random()<.2)return free[rand(free.length)];
+    let bs=-2,mv=free[0];
+    for(const i of free){bd[i]='O';const s=mm(bd,'X');bd[i]='';if(s>bs){bs=s;mv=i}}
+    return mv;
+  };
+  const put=(i,p)=>{bd[i]=p;cells[i].textContent=p;cells[i].className='cell '+p};
+  const check=()=>{
+    const r=result(bd);if(!r)return false;
+    over=true;const k=r==='X'?'w':r==='O'?'a':'d';sc[k]++;store.set('ttt',sc);
+    m.innerHTML=(r==='X'?'You win!':r==='O'?'The AI wins.':'A draw.')+' <button class="btn" id="r">Next round</button>';
+    $('#r',root).onclick=again;return true;
+  };
+  for(let i=0;i<9;i++){
+    const b=document.createElement('button');b.className='cell';b.setAttribute('aria-label','Square '+(i+1));
+    b.onclick=()=>{
+      if(over||bd[i])return;put(i,'X');if(check())return;
+      over=true;setTimeout(()=>{put(aiMove(),'O');over=false;check()},350);
+    };
+    cells.push(b);g.appendChild(b);
+  }
+  return()=>{over=true};
+}
+
+function hop(root,again){
+  root.innerHTML='<div class="hud"><span>Score <b id="s">0</b></span><span>Best <b id="b"></b></span></div><canvas id="c" width="360" height="480" style="max-width:360px;margin:0 auto"></canvas><p class="msg" id="m">Click, tap or press Space to flap.</p>';
+  const c=$('#c',root),x=c.getContext('2d'),m=$('#m',root);
+  let y=220,v=0,pipes=[],t=0,score=0,raf,dead=false,best=store.get('hop-best',0);
+  $('#b',root).textContent=best;
+  const flap=()=>{if(!dead)v=-6.2};
+  const onKey=e=>{if(e.code==='Space'){e.preventDefault();flap()}};
+  c.addEventListener('pointerdown',flap);document.addEventListener('keydown',onKey);
+  function frame(){
+    v+=.35;y+=v;t++;
+    if(t%90===1)pipes.push({x:360,gap:110+rand(180)});
+    pipes.forEach(p=>p.x-=2.4);
+    if(pipes.length&&pipes[0].x<-50)pipes.shift();
+    for(const p of pipes){
+      if(!p.s&&p.x+50<80){p.s=1;$('#s',root).textContent=++score}
+      if(92>p.x&&68<p.x+50&&(y-12<p.gap-70||y+12>p.gap+70))dead=true;
+    }
+    if(y>468||y<12)dead=true;
+    x.fillStyle='#000';x.fillRect(0,0,360,480);
+    x.fillStyle='#22c55e';pipes.forEach(p=>{x.fillRect(p.x,0,50,p.gap-70);x.fillRect(p.x,p.gap+70,50,480)});
+    x.fillStyle='#fff';x.beginPath();x.arc(80,y,12,0,7);x.fill();
+    if(dead){
+      if(score>best)store.set('hop-best',score);
+      m.innerHTML='Crashed with '+score+' points. <button class="btn" id="r">Play again</button>';$('#r',root).onclick=again;return;
+    }
+    raf=requestAnimationFrame(frame);
+  }
+  frame();
+  return()=>{cancelAnimationFrame(raf);document.removeEventListener('keydown',onKey)};
+}
+
+function lights(root,again){
+  root.innerHTML='<div class="hud"><span>Moves <b id="mv">0</b></span><span>Best <b id="b"></b></span></div><div class="grid lo" id="g"></div><p class="msg" id="m">Turn every light off. Each tap flips its neighbors.</p>';
+  const g=$('#g',root),m=$('#m',root),on=Array(25).fill(false),cells=[];
+  let moves=0,over=false,best=store.get('lights-best',0);
+  $('#b',root).textContent=best||'-';
+  const flip=i=>{const r=Math.floor(i/5),c=i%5;[[0,0],[1,0],[-1,0],[0,1],[0,-1]].forEach(([a,b])=>{const y=r+a,z=c+b;if(y>=0&&y<5&&z>=0&&z<5)on[y*5+z]=!on[y*5+z]})};
+  const paint=()=>cells.forEach((el,i)=>el.classList.toggle('lit',on[i]));
+  for(let k=0;k<12;k++)flip(rand(25));
+  if(!on.some(Boolean))flip(12);
+  for(let i=0;i<25;i++){
+    const b=document.createElement('button');b.className='cell';b.setAttribute('aria-label','Light '+(i+1));
+    b.onclick=()=>{
+      if(over)return;flip(i);$('#mv',root).textContent=++moves;paint();
+      if(!on.some(Boolean)){
+        over=true;if(!best||moves<best){best=moves;store.set('lights-best',moves);$('#b',root).textContent=moves}
+        m.innerHTML='Lights out in '+moves+' moves! <button class="btn" id="r">New puzzle</button>';$('#r',root).onclick=again;
+      }
+    };
+    cells.push(b);g.appendChild(b);
+  }
+  paint();
+  return()=>{};
+}
+
+function reaction(root,again){
+  root.innerHTML='<div class="react" id="p" tabindex="0" role="button">Click to start</div><div class="hud" style="margin-top:.8rem"><span>Last <b id="l">-</b></span><span>Best <b id="b"></b></span></div>';
+  const p=$('#p',root);let state=0,t0,tm,best=store.get('react-best',0);
+  $('#b',root).textContent=best?best+' ms':'-';
+  const go=()=>{
+    if(state===0||state===3){
+      state=1;p.className='react wait';p.textContent='Wait for green...';
+      tm=setTimeout(()=>{state=2;t0=performance.now();p.className='react go';p.textContent='CLICK!'},1200+rand(2800));
+    }else if(state===1){clearTimeout(tm);state=3;p.className='react';p.textContent='Too soon! Click to retry'}
+    else{
+      const ms=Math.round(performance.now()-t0);state=3;p.className='react';p.textContent=ms+' ms. Click to go again';
+      $('#l',root).textContent=ms+' ms';
+      if(!best||ms<best){best=ms;store.set('react-best',ms);$('#b',root).textContent=ms+' ms'}
+    }
+  };
+  p.onpointerdown=go;
+  p.onkeydown=e=>{if(e.key===' '||e.key==='Enter'){e.preventDefault();go()}};
+  return()=>clearTimeout(tm);
+}
+
+function pong(root,again){
+  root.innerHTML='<div class="hud"><span>You <b id="a">0</b></span><span>First to 7</span><span>AI <b id="b">0</b></span></div><canvas id="c" width="480" height="320"></canvas><p class="msg" id="m">Move the mouse, your finger or use W / S.</p>';
+  const c=$('#c',root),x=c.getContext('2d'),m=$('#m',root);
+  let py=130,ay=130,bx=240,by=160,vx=4,vy=2,sa=0,sb=0,raf,U=false,D=false;
+  const serve=d=>{bx=240;by=160;vx=4*d;vy=Math.random()*4-2};
+  const kd=e=>{if(e.key==='w'||e.key==='ArrowUp')U=true;if(e.key==='s'||e.key==='ArrowDown')D=true};
+  const ku=e=>{if(e.key==='w'||e.key==='ArrowUp')U=false;if(e.key==='s'||e.key==='ArrowDown')D=false};
+  c.addEventListener('pointermove',e=>{const r=c.getBoundingClientRect();py=(e.clientY-r.top)*c.height/r.height-30});
+  function frame(){
+    if(U)py-=6;if(D)py+=6;py=Math.max(0,Math.min(260,py));
+    ay+=Math.max(-3.2,Math.min(3.2,by-30-ay));ay=Math.max(0,Math.min(260,ay));
+    bx+=vx;by+=vy;
+    if(by<6||by>314)vy*=-1;
+    if(vx<0&&bx<24&&bx>10&&by>py&&by<py+60){vx=Math.min(9,-vx*1.06);vy+=(by-py-30)/10}
+    if(vx>0&&bx>456&&bx<470&&by>ay&&by<ay+60){vx=-Math.min(9,vx*1.06);vy+=(by-ay-30)/10}
+    vy=Math.max(-6,Math.min(6,vy));
+    if(bx<0){$('#b',root).textContent=++sb;serve(1)}
+    if(bx>480){$('#a',root).textContent=++sa;serve(-1)}
+    x.fillStyle='#000';x.fillRect(0,0,480,320);
+    x.fillStyle='#ffffff30';for(let i=0;i<320;i+=20)x.fillRect(238,i,4,10);
+    x.fillStyle='#22c55e';x.fillRect(10,py,10,60);x.fillStyle='#fff';x.fillRect(460,ay,10,60);
+    x.beginPath();x.arc(bx,by,6,0,7);x.fill();
+    if(sa>=7||sb>=7){
+      m.innerHTML=(sa>=7?'You win!':'The AI wins.')+' <button class="btn" id="r">Rematch</button>';$('#r',root).onclick=again;return;
+    }
+    raf=requestAnimationFrame(frame);
+  }
+  document.addEventListener('keydown',kd);document.addEventListener('keyup',ku);frame();
+  return()=>{cancelAnimationFrame(raf);document.removeEventListener('keydown',kd);document.removeEventListener('keyup',ku)};
+}
+
+function tetris(root,again){
+  root.innerHTML='<div class="hud"><span>Score <b id="s">0</b></span><span>Lines <b id="l">0</b></span><span>Best <b id="b"></b></span></div><canvas id="c" width="240" height="480" style="max-width:240px;margin:0 auto"></canvas><p class="msg" id="m">Arrows to move and rotate, Space to drop. On touch: tap to rotate, swipe to move.</p>';
+  const c=$('#c',root),x=c.getContext('2d'),m=$('#m',root),W=10,H=20,S=24;
+  const SH=[[[1,1,1,1]],[[1,1],[1,1]],[[0,1,0],[1,1,1]],[[1,0,0],[1,1,1]],[[0,0,1],[1,1,1]],[[0,1,1],[1,1,0]],[[1,1,0],[0,1,1]]];
+  const COL=['#22d3ee','#fde047','#c084fc','#60a5fa','#fb923c','#4ade80','#f87171'];
+  let board=Array.from({length:H},()=>Array(W).fill(0)),cur,score=0,lines=0,over=false,timer,sx,sy,best=store.get('tetris-best',0);
+  $('#b',root).textContent=best;
+  const hit=(mat,px,py)=>mat.some((r,y)=>r.some((v,xx)=>v&&(px+xx<0||px+xx>=W||py+y>=H||(py+y>=0&&board[py+y][px+xx]))));
+  const rot=mat=>mat[0].map((_,i)=>mat.map(r=>r[i]).reverse());
+  const cell=(px,py,col)=>{x.fillStyle=col;x.fillRect(px*S+1,py*S+1,S-2,S-2)};
+  const draw=()=>{
+    x.fillStyle='#000';x.fillRect(0,0,c.width,c.height);
+    board.forEach((r,y)=>r.forEach((v,xx)=>{if(v)cell(xx,y,COL[v-1])}));
+    if(over)return;
+    let gy=cur.y;while(!hit(cur.m,cur.x,gy+1))gy++;
+    x.globalAlpha=.25;cur.m.forEach((r,y)=>r.forEach((v,xx)=>v&&cell(cur.x+xx,gy+y,COL[cur.c-1])));x.globalAlpha=1;
+    cur.m.forEach((r,y)=>r.forEach((v,xx)=>v&&cell(cur.x+xx,cur.y+y,COL[cur.c-1])));
+  };
+  const end=()=>{
+    over=true;clearInterval(timer);if(score>best)store.set('tetris-best',score);
+    m.innerHTML='Stacked out! <button class="btn" id="r">Play again</button>';$('#r',root).onclick=again;
+  };
+  const spawn=()=>{const i=rand(7);cur={m:SH[i].map(r=>r.slice()),c:i+1,x:3,y:0};if(hit(cur.m,cur.x,cur.y))end()};
+  const speed=()=>{clearInterval(timer);timer=setInterval(step,Math.max(100,600-Math.floor(lines/5)*60))};
+  const lock=()=>{
+    cur.m.forEach((r,y)=>r.forEach((v,xx)=>{if(v&&cur.y+y>=0)board[cur.y+y][cur.x+xx]=cur.c}));
+    let n=0;board=board.filter(r=>{if(r.every(Boolean)){n++;return false}return true});
+    while(board.length<H)board.unshift(Array(W).fill(0));
+    if(n){lines+=n;score+=[0,100,300,500,800][n];$('#l',root).textContent=lines;speed()}
+    $('#s',root).textContent=score;spawn();
+  };
+  const step=()=>{if(!hit(cur.m,cur.x,cur.y+1))cur.y++;else lock();draw()};
+  const mv=dx=>{if(!hit(cur.m,cur.x+dx,cur.y)){cur.x+=dx;draw()}};
+  const turn=()=>{const r=rot(cur.m);for(const k of[0,-1,1,-2,2])if(!hit(r,cur.x+k,cur.y)){cur.m=r;cur.x+=k;break}draw()};
+  const drop=()=>{while(!hit(cur.m,cur.x,cur.y+1)){cur.y++;score+=2}lock();draw()};
+  const onKey=e=>{
+    if(over)return;const k=e.key;
+    if(k==='ArrowLeft')mv(-1);else if(k==='ArrowRight')mv(1);else if(k==='ArrowUp')turn();else if(k==='ArrowDown')step();else if(e.code==='Space')drop();else return;
+    e.preventDefault();
+  };
+  c.addEventListener('pointerdown',e=>{sx=e.clientX;sy=e.clientY});
+  c.addEventListener('pointerup',e=>{
+    if(over)return;const dx=e.clientX-sx,dy=e.clientY-sy;
+    if(Math.abs(dx)<15&&Math.abs(dy)<15)turn();else if(Math.abs(dx)>Math.abs(dy))mv(dx>0?1:-1);else if(dy>0)drop();
+  });
+  document.addEventListener('keydown',onKey);
+  spawn();draw();speed();
+  return()=>{clearInterval(timer);document.removeEventListener('keydown',onKey)};
+}
+
+const META={
+ 'Tetris':['#1e1b4b','#22d3ee','Puzzle','linear-gradient(#fff5,#fff5) 55% 72%/26px 26px no-repeat,linear-gradient(#fff4,#fff4) 70% 72%/26px 26px no-repeat,linear-gradient(#fff4,#fff4) 85% 72%/26px 26px no-repeat,linear-gradient(#fff3,#fff3) 70% 38%/26px 26px no-repeat'],
+ 'Hop':['#0e7490','#a7f3d0','Arcade','radial-gradient(circle at 78% 30%,#fff6 0 12%,transparent 13%),linear-gradient(#fff4,#fff4) 90% 100%/30px 55% no-repeat,linear-gradient(#fff3,#fff3) 70% 0/30px 40% no-repeat'],
+ 'Lights Out':['#312e81','#bef264','Puzzle','radial-gradient(circle,#fff6 0 7px,transparent 8px) 0 0/30px 30px'],
+ 'Reaction':['#7f1d1d','#4ade80','Reflex','repeating-linear-gradient(135deg,#fff3 0 8px,transparent 8px 24px)'],
+ 'Pong':['#064e3b','#ffffff','Arcade','linear-gradient(#fff5,#fff5) 90% 30%/8px 36px no-repeat,linear-gradient(#fff5,#fff5) 70% 60%/8px 36px no-repeat,radial-gradient(circle at 80% 50%,#fff8 0 5px,transparent 6px)'],
+ 'Bug Smash':['#0f766e','#a3e635','Reflex','radial-gradient(circle at 70% 40%,#fff6 0 14%,transparent 15%),radial-gradient(circle at 88% 72%,#fff4 0 9%,transparent 10%)'],
+ 'Hangman':['#064e3b','#34d399','Words','repeating-linear-gradient(90deg,#fff5 0 18px,transparent 18px 32px)'],
+ 'Memory Match':['#1e3a8a','#22d3ee','Puzzle','conic-gradient(#fff4 25%,transparent 0 50%,#fff4 0 75%,transparent 0) 0 0/40px 40px'],
+ 'Breakout':['#9a3412','#fbbf24','Arcade','repeating-linear-gradient(0deg,#fff5 0 10px,transparent 10px 17px)'],
+ 'Signal':['#5b21b6','#a3e635','Audio','repeating-radial-gradient(circle at 80% 50%,#fff5 0 3px,transparent 3px 18px)'],
+ 'Type Rain':['#022c22','#4ade80','Typing','repeating-linear-gradient(90deg,#fff4 0 2px,transparent 2px 14px)'],
+ 'Snake':['#14532d','#bef264','Arcade','linear-gradient(135deg,transparent 40%,#fff5 40% 48%,transparent 48%) 0 0/32px 32px'],
+ '2048':['#b45309','#fde68a','Puzzle','linear-gradient(#fff4,#fff4) 68% 18%/48px 48px no-repeat,linear-gradient(#fff3,#fff3) 88% 18%/48px 48px no-repeat,linear-gradient(#fff3,#fff3) 68% 68%/48px 48px no-repeat,linear-gradient(#fff5,#fff5) 88% 68%/48px 48px no-repeat'],
+ 'Minesweeper':['#0c4a6e','#38bdf8','Logic','radial-gradient(#fff4 2px,transparent 3px) 0 0/24px 24px'],
+ 'Tic-Tac-Toe':['#111827','#e5e7eb','Vs AI','linear-gradient(#fff5,#fff5) 72% 0/3px 100% no-repeat,linear-gradient(#fff5,#fff5) 88% 0/3px 100% no-repeat,linear-gradient(#fff5,#fff5) 0 38%/100% 3px no-repeat,linear-gradient(#fff5,#fff5) 0 68%/100% 3px no-repeat'],
+ 'Sketchpad':['#be123c','#fb923c','Creative','radial-gradient(circle at 75% 35%,#fff5 0 22%,transparent 23%),radial-gradient(circle at 90% 75%,#0005 0 18%,transparent 19%)']
+};
+
+const GAMES=[
+  {name:'Bug Smash',icon:'🐛',desc:'30 seconds, as many bugs as you can',run:bugs},
+  {name:'Hangman',icon:'🔤',desc:'Guess the word before the drawing completes',run:hangman},
+  {name:'Memory Match',icon:'🧠',desc:'Find all the matching pairs',run:memory},
+  {name:'Breakout',icon:'🧱',desc:'Smash every brick with the ball',run:breakout},
+  {name:'Signal',icon:'🎵',desc:'Repeat the growing light and sound pattern',run:signal},
+  {name:'Type Rain',icon:'⌨️',desc:'Type the falling words before they land',run:typerain},
+  {name:'Snake',icon:'🐍',desc:'Eat, grow, and do not crash',run:snake},
+  {name:'2048',icon:'',desc:'Slide and merge tiles to reach 2048',run:g2048},
+  {name:'Minesweeper',icon:'',desc:'Clear the board without hitting a mine',run:mines},
+  {name:'Tic-Tac-Toe',icon:'',desc:'Beat a smart AI opponent',run:ttt},
+  {name:'Tetris',icon:'',desc:'Stack falling blocks and clear the lines',run:tetris},
+  {name:'Hop',icon:'',desc:'Flap through the gaps without crashing',run:hop},
+  {name:'Lights Out',icon:'',desc:'Switch off every light in the fewest moves',run:lights},
+  {name:'Reaction',icon:'',desc:'How fast can you react? Test it in ms',run:reaction},
+  {name:'Pong',icon:'',desc:'Classic paddle duel against the computer',run:pong},
+  {name:'Sketchpad',icon:'',desc:'Draw freely and save your art',run:drawing}
+];
+const menu=$('#menu'),stage=$('#stage'),root=$('#game');let cleanup=null,opener=null;
+function launch(g){
+  if(cleanup)cleanup();
+  root.innerHTML='';
+  cleanup=g.run(root,()=>launch(g));
+  $('#title').textContent=g.name;
+  stage.style.setProperty('--c1',META[g.name][0]);stage.style.setProperty('--green',META[g.name][1]);
+  stage.hidden=false;stage.scrollTop=0;document.body.style.overflow='hidden';$('#back').focus();
+  history.replaceState(null,'','#'+encodeURIComponent(g.name.toLowerCase().replace(/ /g,'-')));
+}
+function home(){
+  if(cleanup)cleanup();cleanup=null;root.innerHTML='';
+  stage.hidden=true;document.body.style.overflow='';if(opener)opener.focus({preventScroll:true});history.replaceState(null,'',location.pathname);
+}
+GAMES.forEach((g,i)=>{
+  const[c1,c2,tag,art]=META[g.name];
+  const b=document.createElement('button');b.className='card';
+  b.style.setProperty('--c1',c1);b.style.setProperty('--c2',c2);
+  b.innerHTML='<div class="art" style="background:'+art+'"></div><span class="n">'+String(i+1).padStart(2,'0')+'</span><span class="chip">'+tag+'</span><b>'+g.name+'</b><small>'+g.desc+'</small>';
+  b.onclick=()=>{opener=b;launch(g)};menu.appendChild(b);
+});
+$('#back').onclick=home;
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!stage.hidden)home()});
+const start=GAMES.find(g=>g.name.toLowerCase().replace(/ /g,'-')===decodeURIComponent(location.hash.slice(1)));
+if(start)launch(start);
+</script>
+</body>
+</html>
